@@ -1,0 +1,97 @@
+name: Release S-UI Slim
+
+on:
+  push:
+    tags:
+      - "slim-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to package, for example slim-v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build-${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux/amd64, arch: amd64 }
+          - { platform: linux/arm64, arch: arm64 }
+          - { platform: linux/arm/v7, arch: armv7 }
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Build slim runtime filesystem
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile.slim
+          target: runtime
+          platforms: ${{ matrix.platform }}
+          outputs: type=local,dest=runtime
+
+      - name: Package binary and OpenRC service
+        run: |
+          set -eu
+          mkdir -p package/s-ui-slim-linux-${{ matrix.arch }}
+          cp runtime/app/sui package/s-ui-slim-linux-${{ matrix.arch }}/sui
+          cp openrc/s-ui.slim package/s-ui-slim-linux-${{ matrix.arch }}/s-ui.slim
+          chmod 0755 package/s-ui-slim-linux-${{ matrix.arch }}/sui package/s-ui-slim-linux-${{ matrix.arch }}/s-ui.slim
+          tar -C package -czf s-ui-slim-linux-${{ matrix.arch }}.tar.gz s-ui-slim-linux-${{ matrix.arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: s-ui-slim-linux-${{ matrix.arch }}
+          path: s-ui-slim-linux-${{ matrix.arch }}.tar.gz
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: s-ui-slim-linux-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums
+        run: |
+          set -eu
+          cd dist
+          sha256sum s-ui-slim-linux-*.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TAG" \
+              --notes "Prebuilt S-UI Slim binaries for low-memory Alpine hosts."
+          fi

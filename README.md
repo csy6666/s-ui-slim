@@ -275,6 +275,20 @@ Build a Linux binary with `./build-slim.sh`, or build the runtime image with
 binary under `/app`, copy `openrc/s-ui.slim` to `/etc/init.d/s-ui-slim`, then
 run `rc-update add s-ui-slim default` and `rc-service s-ui-slim start`.
 
+After a `slim-v*` release is published, a fresh Alpine host can be installed
+with one command (the installer downloads a prebuilt binary, so the host does
+not need Go, Node.js or a compiler):
+
+```sh
+wget -qO- https://raw.githubusercontent.com/csy6666/s-ui-slim/main/install-slim.sh | sh
+```
+
+Useful overrides are `SUI_SLIM_VERSION=slim-v0.1.0`,
+`SUI_SLIM_PORT=2095`, `SUI_SLIM_SUB_PORT=2096` and
+`SUI_SLIM_PREFIX=/usr/local/s-ui-slim`. The installer accepts Alpine
+`amd64`, `arm64` and `armv7`, verifies `SHA256SUMS`, creates an OpenRC service,
+enables it at boot and keeps an existing slim database during upgrades.
+
 The normal build remains unchanged. Unsupported protocol types return a clear
 configuration error in slim mode; use the full build when QUIC, Hysteria2,
 TUIC, TUN, OpenVPN, Tailscale, ACME or other optional integrations are needed.
