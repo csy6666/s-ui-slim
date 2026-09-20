@@ -1,3 +1,5 @@
+//go:build !slim
+
 package core
 
 import (

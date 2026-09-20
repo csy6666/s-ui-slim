@@ -1,0 +1,28 @@
+# Small runtime image for 128 MiB Alpine/NAT hosts. Build from a checkout with
+# the frontend submodule initialized; no Node/npm tooling is shipped at runtime.
+FROM node:22-alpine AS frontend
+WORKDIR /src/frontend
+COPY frontend/package*.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
+FROM golang:1.26-alpine AS backend
+WORKDIR /src
+RUN apk add --no-cache gcc musl-dev
+COPY go.mod go.sum ./
+RUN GOTOOLCHAIN=auto go mod download
+COPY . .
+COPY --from=frontend /src/frontend/dist/ /src/web/html/
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -tags 'slim,with_utls' -o /out/sui ./main.go
+
+FROM alpine:3.24
+RUN apk add --no-cache ca-certificates tzdata && addgroup -S sui && adduser -S -D -H -G sui sui
+WORKDIR /app
+COPY --from=backend /out/sui /app/sui
+COPY openrc/s-ui.slim /etc/init.d/s-ui
+RUN mkdir -p /app/db /app/bin /app/web/html && chown -R sui:sui /app && chmod +x /etc/init.d/s-ui
+ENV SUI_DB_FOLDER=/app/db
+ENV SUI_LOG_LEVEL=warn
+EXPOSE 2095 2096
+ENTRYPOINT ["/app/sui"]

@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+name="s-ui-slim"
+description="S-UI slim panel for low-memory Alpine hosts"
+command="/app/sui"
+command_user="sui:sui"
+directory="/app"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="/var/log/${RC_SVCNAME}.err"
+command_background="yes"
+respawn_delay=5
+
+depend() {
+    need net
+    use logger
+}

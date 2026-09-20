@@ -81,6 +81,12 @@ func OpenDB(dbPath string) error {
 	}
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetMaxIdleConns(2)
+	if config.IsSlimBuild() {
+		// Keep two connections: some management transactions perform reads
+		// through the root handle while holding their transaction connection.
+		sqlDB.SetMaxOpenConns(2)
+		sqlDB.SetMaxIdleConns(1)
+	}
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 

@@ -96,6 +96,15 @@ var defaultValueMap = map[string]string{
 type SettingService struct {
 }
 
+func init() {
+	if config.IsSlimBuild() {
+		// Only defaults change. Existing databases keep their explicit values.
+		defaultValueMap["trafficAge"] = "0"
+		defaultValueMap["statsBucketSeconds"] = "300"
+		defaultValueMap["timeLocation"] = "UTC"
+	}
+}
+
 func (s *SettingService) GetAllSetting() (*map[string]string, error) {
 	db := database.GetDB()
 	settings := make([]*model.Setting, 0)

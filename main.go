@@ -9,6 +9,7 @@ import (
 
 	"github.com/alireza0/s-ui/app"
 	"github.com/alireza0/s-ui/cmd"
+	"github.com/alireza0/s-ui/config"
 )
 
 func runApp() {
@@ -41,6 +42,7 @@ func runApp() {
 }
 
 func main() {
+	config.ConfigureRuntime()
 	if len(os.Args) < 2 {
 		runApp()
 		return

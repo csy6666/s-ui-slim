@@ -259,6 +259,29 @@ To run backend (from root folder of repository):
 - HTTPS for secure access to the web panel and subscription service (self-provided domain + SSL certificate)
 - Dark/Light theme
 
+## S-UI Slim for 128 MiB Alpine NAT hosts
+
+This fork keeps the S-UI management API, SQLite state, subscriptions and the
+common TCP protocols (VLESS, VMess, Trojan, Shadowsocks, AnyTLS, SOCKS/HTTP)
+but removes optional QUIC/TUN/endpoint integrations from the `slim` binary.
+The slim build also defaults to no historical traffic retention, 5-minute
+statistics buckets, two SQLite connections, `GOGC=50` and a 64 MiB Go memory
+target. These are defaults, not a guarantee: sing-box traffic, TLS buffers,
+kernel sockets and the Alpine process still need headroom, so 128 MiB is a
+small-node target rather than a supported high-concurrency capacity.
+
+Build a Linux binary with `./build-slim.sh`, or build the runtime image with
+`docker build -f Dockerfile.slim -t s-ui-slim .`. On Alpine, install the
+binary under `/app`, copy `openrc/s-ui.slim` to `/etc/init.d/s-ui-slim`, then
+run `rc-update add s-ui-slim default` and `rc-service s-ui-slim start`.
+
+The normal build remains unchanged. Unsupported protocol types return a clear
+configuration error in slim mode; use the full build when QUIC, Hysteria2,
+TUIC, TUN, OpenVPN, Tailscale, ACME or other optional integrations are needed.
+The upstream full-protocol compatibility tests are intentionally excluded from
+slim test runs; `go test -tags 'slim,with_utls' ./core ./config` covers the slim
+registry contract instead.
+
 ## Environment Variables
 
 <details>

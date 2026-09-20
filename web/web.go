@@ -21,7 +21,6 @@ import (
 	"github.com/alireza0/s-ui/service"
 	"github.com/alireza0/s-ui/util/common"
 
-	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -100,7 +99,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
-	engine.Use(gzip.Gzip(gzip.DefaultCompression))
+	useCompression(engine)
 	assetsBasePath := base_url + "assets/"
 
 	sessionMaxAge, err := s.settingService.GetSessionMaxAge()

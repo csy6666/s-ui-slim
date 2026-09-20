@@ -25,6 +25,7 @@ NAIVE_TAGS="with_naive_outbound"
 
 tags_for() {
     case "$1" in
+        slim)        echo "slim,with_utls" ;;
         test)        echo "${BASE_TAGS},${LINKNAME_TAGS}" ;;
         dev|release) echo "${BASE_TAGS},${LINKNAME_TAGS},${NAIVE_TAGS},with_musl" ;;
         windows)     echo "${BASE_TAGS},${LINKNAME_TAGS},${NAIVE_TAGS},with_purego" ;;
@@ -39,6 +40,7 @@ tags_for() {
 # Only the flags tied to the tags; callers add their own platform linking flags.
 ldflags_for() {
     case "$1" in
+        slim)                     echo "-w -s" ;;
         test|dev|release|windows) echo "-w -s -checklinkname=0" ;;
         docker)                   echo "-w -s" ;;
         *)
